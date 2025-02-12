@@ -30,7 +30,7 @@ jobs:
           EMAILJS_PRIVATE_KEY: ${{ secrets.EMAILJS_PRIVATE_KEY }}
           TO_EMAIL: ${{ secrets.TO_EMAIL }}
         run: |
-          node <<EOF
+          node - << 'EOF'
           const axios = require('axios');
           const emailjs = require('@emailjs/nodejs');
 
