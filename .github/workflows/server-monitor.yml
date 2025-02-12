@@ -23,12 +23,6 @@ jobs:
           const axios = require('axios');
           const emailjs = require('@emailjs/nodejs');
 
-          // Configure EmailJS
-          emailjs.init({
-            publicKey: process.env.EMAILJS_PUBLIC_KEY,
-            privateKey: process.env.EMAILJS_PRIVATE_KEY
-          });
-
           // Servers to monitor
           const servers = [
             { id: "1", name: "Live Chat Agent", url: "https://bot.dgmatrix.com:8000/test" },
@@ -42,27 +36,36 @@ jobs:
           const sendEmailNotification = async (downServers) => {
             if (downServers.length === 0) return;
 
-            const emailParams = {
-              service_id: process.env.EMAILJS_SERVICE_ID,
-              template_id: process.env.EMAILJS_TEMPLATE_ID,
-              user_id: process.env.EMAILJS_PUBLIC_KEY,
-              template_params: {
-                to_email: process.env.TO_EMAIL,
-                subject: "⚠️ Server Down Alert",
-                message: downServers.map(server => 
-                  `ID: ${server.id}\n` +
-                  `Name: ${server.name}\n` +
-                  `Status: DOWN\n` +
-                  `Last Checked: ${new Date().toLocaleString()}\n\n`
-                ).join("")
-              }
-            };
-
             try {
+              // Correctly initialize EmailJS with all required parameters
+              const init = emailjs.init({
+                publicKey: process.env.EMAILJS_PUBLIC_KEY,
+                privateKey: process.env.EMAILJS_PRIVATE_KEY
+              });
+
+              // Prepare email parameters
+              const emailParams = {
+                service_id: process.env.EMAILJS_SERVICE_ID,
+                template_id: process.env.EMAILJS_TEMPLATE_ID,
+                user_params: {
+                  to_email: process.env.TO_EMAIL,
+                  subject: "⚠️ Server Down Alert",
+                  message: downServers.map(server => 
+                    `ID: ${server.id}\n` +
+                    `Name: ${server.name}\n` +
+                    `URL: ${server.url}\n` +
+                    `Status: DOWN\n` +
+                    `Last Checked: ${new Date().toLocaleString()}\n\n`
+                  ).join("")
+                }
+              };
+
+              // Send email
               const response = await emailjs.send(emailParams);
               console.log("Email sent successfully!", response);
             } catch (error) {
               console.error("Failed to send email:", error);
+              console.error("Error details:", JSON.stringify(error, null, 2));
             }
           };
 
@@ -72,11 +75,18 @@ jobs:
 
             for (const server of servers) {
               try {
-                const response = await axios.get(server.url, { timeout: 5000 });
+                const response = await axios.get(server.url, { 
+                  timeout: 5000,
+                  validateStatus: () => false  // Always resolve the promise
+                });
+                
+                // Consider server down if status is not 200
                 if (response.status !== 200) {
+                  console.log(`Server ${server.name} is down. Status: ${response.status}`);
                   downServers.push({ ...server, status: "DOWN", lastChecked: new Date() });
                 }
               } catch (error) {
+                console.log(`Server ${server.name} is down. Error: ${error.message}`);
                 downServers.push({ ...server, status: "DOWN", lastChecked: new Date() });
               }
             }
