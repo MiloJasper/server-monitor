@@ -42,6 +42,7 @@ jobs:
                 publicKey: process.env.EMAILJS_PUBLIC_KEY,
                 privateKey: process.env.EMAILJS_PRIVATE_KEY
               });
+              console.log("EmailJS:", process.env.EMAILJS_SERVICE_ID);
 
               // Prepare email parameters
               const emailParams = {
