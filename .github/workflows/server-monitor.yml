@@ -42,7 +42,6 @@ jobs:
                 publicKey: process.env.EMAILJS_PUBLIC_KEY,
                 privateKey: process.env.EMAILJS_PRIVATE_KEY
               });
-              console.log("EmailJS:", process.env.EMAILJS_SERVICE_ID);
 
               // Prepare email parameters
               const emailParams = {
@@ -94,6 +93,8 @@ jobs:
 
             if (downServers.length > 0) {
               console.log("Some servers are down! Sending email...");
+              console.log("EmailJS:", process.env.EMAILJS_SERVICE_ID);
+
               await sendEmailNotification(downServers);
             } else {
               console.log("All servers are up.");
