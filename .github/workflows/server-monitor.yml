@@ -32,40 +32,34 @@ jobs:
             { id: "5", name: "Installation Bot (9010)", url: "https://bot.dgmatrix.com:9010" },
           ];
 
-          // Email notification function
+          // EmailJS Config
+          const serviceId = "service_fcfdk1p";
+          const templateId = "template_epeq4jb";
+          const publicKey = "BHIc8zvsSTfWHapYQ";
+          const toEmail = "milo.jasper@angularspring.com";
+
+          // Function to send an email
           const sendEmailNotification = async (downServers) => {
             if (downServers.length === 0) return;
 
+            const emailParams = {
+              to_email: toEmail,
+              subject: "⚠️ Server Down Alert",
+              message:
+                `The following servers are down:\n\n` +
+                downServers
+                  .map(
+                    (server) =>
+                      `ID: ${server.id}\nName: ${server.name}\nStatus: DOWN\nLast Checked: ${new Date().toLocaleString()}\n\n`
+                  )
+                  .join(""),
+            };
+
             try {
-              // Correctly initialize EmailJS with all required parameters
-              const init = emailjs.init({
-                publicKey: "BHIc8zvsSTfWHapYQ",
-                privateKey: "q1gTYzaQfkcJ-QBfV3_Ab"
-              });
-
-              // Prepare email parameters
-              const emailParams = {
-                service_id: "service_fcfdk1p",
-                template_id: "template_epeq4jb",
-                user_params: {
-                  to_email: "milo.jasper@angularspring.com",
-                  subject: "⚠️ Server Down Alert",
-                  message: downServers.map(server => 
-                    `ID: ${server.id}\n` +
-                    `Name: ${server.name}\n` +
-                    `URL: ${server.url}\n` +
-                    `Status: DOWN\n` +
-                    `Last Checked: ${new Date().toLocaleString()}\n\n`
-                  ).join("")
-                }
-              };
-
-              // Send email
-              const response = await emailjs.send(emailParams);
-              console.log("Email sent successfully!", response);
+              await emailjs.send(serviceId, templateId, emailParams, publicKey);
+              console.log("Email sent successfully!");
             } catch (error) {
               console.error("Failed to send email:", error);
-              console.error("Error details:", JSON.stringify(error, null, 2));
             }
           };
 
