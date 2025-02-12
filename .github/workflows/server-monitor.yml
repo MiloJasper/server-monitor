@@ -1,0 +1,115 @@
+name: Server Monitoring
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # Run every 5 minutes
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  monitor-servers:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install Dependencies
+        run: |
+          npm init -y
+          npm install axios @emailjs/nodejs
+      
+      - name: Run Server Monitoring
+        env:
+          EMAILJS_SERVICE_ID: ${{ secrets.EMAILJS_SERVICE_ID }}
+          EMAILJS_TEMPLATE_ID: ${{ secrets.EMAILJS_TEMPLATE_ID }}
+          EMAILJS_PUBLIC_KEY: ${{ secrets.EMAILJS_PUBLIC_KEY }}
+          EMAILJS_PRIVATE_KEY: ${{ secrets.EMAILJS_PRIVATE_KEY }}
+          TO_EMAIL: ${{ secrets.TO_EMAIL }}
+        run: |
+          node <<EOF
+          const axios = require('axios');
+          const emailjs = require('@emailjs/nodejs');
+
+          // Configure EmailJS
+          emailjs.init({
+            publicKey: process.env.EMAILJS_PUBLIC_KEY,
+            privateKey: process.env.EMAILJS_PRIVATE_KEY
+          });
+
+          // Servers to monitor
+          const servers = [
+            { id: "1", name: "Live Chat Agent", url: "https://bot.dgmatrix.com:8000/test" },
+            { id: "2", name: "CLI Bot (9005)", url: "https://bot.dgmatrix.com:9005" },
+            { id: "3", name: "Not Logged-in Bot (9007)", url: "https://bot.dgmatrix.com:9007" },
+            { id: "4", name: "CLI Bot (9009)", url: "https://bot.dgmatrix.com:9009/images/241225bloomusermanual/issue.png" },
+            { id: "5", name: "Installation Bot (9010)", url: "https://bot.dgmatrix.com:9010" },
+          ];
+
+          // Email notification function
+          const sendEmailNotification = async (downServers) => {
+            if (downServers.length === 0) return;
+
+            const emailParams = {
+              service_id: process.env.EMAILJS_SERVICE_ID,
+              template_id: process.env.EMAILJS_TEMPLATE_ID,
+              user_id: process.env.EMAILJS_PUBLIC_KEY,
+              template_params: {
+                to_email: process.env.TO_EMAIL,
+                subject: "⚠️ Server Down Alert",
+                message: 
+                  "The following servers are down:\n\n" +
+                  downServers
+                    .map(
+                      (server) =>
+                        `ID: ${server.id}\nName: ${server.name}\nStatus: DOWN\nLast Checked: ${new Date().toLocaleString()}\n\n`
+                    )
+                    .join(""),
+              }
+            };
+
+            try {
+              const response = await emailjs.send(emailParams);
+              console.log("Email sent successfully!", response);
+            } catch (error) {
+              console.error("Failed to send email:", error);
+            }
+          };
+
+          // Server check function
+          const checkServers = async () => {
+            const downServers = [];
+
+            for (const server of servers) {
+              try {
+                const response = await axios.get(server.url, { timeout: 5000 });
+                if (response.status !== 200) {
+                  downServers.push({ ...server, status: "DOWN", lastChecked: new Date() });
+                }
+              } catch (error) {
+                downServers.push({ ...server, status: "DOWN", lastChecked: new Date() });
+              }
+            }
+
+            if (downServers.length > 0) {
+              console.log("Some servers are down! Sending email...");
+              await sendEmailNotification(downServers);
+            } else {
+              console.log("All servers are up.");
+            }
+
+            return downServers;
+          };
+
+          // Run the check
+          checkServers().then(downServers => {
+            console.log('Monitoring complete', downServers);
+            process.exit(downServers.length > 0 ? 1 : 0);
+          }).catch(error => {
+            console.error('Monitoring failed', error);
+            process.exit(1);
+          });
+          EOF
