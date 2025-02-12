@@ -17,20 +17,9 @@ jobs:
         with:
           node-version: '20'
       
-      - name: Install Dependencies
+      - name: Create Monitoring Script
         run: |
-          npm init -y
-          npm install axios @emailjs/nodejs
-      
-      - name: Run Server Monitoring
-        env:
-          EMAILJS_SERVICE_ID: ${{ secrets.EMAILJS_SERVICE_ID }}
-          EMAILJS_TEMPLATE_ID: ${{ secrets.EMAILJS_TEMPLATE_ID }}
-          EMAILJS_PUBLIC_KEY: ${{ secrets.EMAILJS_PUBLIC_KEY }}
-          EMAILJS_PRIVATE_KEY: ${{ secrets.EMAILJS_PRIVATE_KEY }}
-          TO_EMAIL: ${{ secrets.TO_EMAIL }}
-        run: |
-          node - << 'EOF'
+          cat > monitor-servers.js << 'ENDOFFILE'
           const axios = require('axios');
           const emailjs = require('@emailjs/nodejs');
 
@@ -60,14 +49,12 @@ jobs:
               template_params: {
                 to_email: process.env.TO_EMAIL,
                 subject: "⚠️ Server Down Alert",
-                message: 
-                  "The following servers are down:\n\n" +
-                  downServers
-                    .map(
-                      (server) =>
-                        `ID: ${server.id}\nName: ${server.name}\nStatus: DOWN\nLast Checked: ${new Date().toLocaleString()}\n\n`
-                    )
-                    .join(""),
+                message: downServers.map(server => 
+                  `ID: ${server.id}\n` +
+                  `Name: ${server.name}\n` +
+                  `Status: DOWN\n` +
+                  `Last Checked: ${new Date().toLocaleString()}\n\n`
+                ).join("")
               }
             };
 
@@ -112,4 +99,19 @@ jobs:
             console.error('Monitoring failed', error);
             process.exit(1);
           });
-          EOF
+          ENDOFFILE
+      
+      - name: Install Dependencies
+        run: |
+          npm init -y
+          npm install axios @emailjs/nodejs
+      
+      - name: Run Server Monitoring
+        env:
+          EMAILJS_SERVICE_ID: ${{ secrets.EMAILJS_SERVICE_ID }}
+          EMAILJS_TEMPLATE_ID: ${{ secrets.EMAILJS_TEMPLATE_ID }}
+          EMAILJS_PUBLIC_KEY: ${{ secrets.EMAILJS_PUBLIC_KEY }}
+          EMAILJS_PRIVATE_KEY: ${{ secrets.EMAILJS_PRIVATE_KEY }}
+          TO_EMAIL: ${{ secrets.TO_EMAIL }}
+        run: |
+          node monitor-servers.js
