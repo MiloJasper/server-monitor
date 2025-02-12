@@ -39,16 +39,16 @@ jobs:
             try {
               // Correctly initialize EmailJS with all required parameters
               const init = emailjs.init({
-                publicKey: process.env.EMAILJS_PUBLIC_KEY,
-                privateKey: process.env.EMAILJS_PRIVATE_KEY
+                publicKey: "BHIc8zvsSTfWHapYQ",
+                privateKey: "q1gTYzaQfkcJ-QBfV3_Ab"
               });
 
               // Prepare email parameters
               const emailParams = {
-                service_id: process.env.EMAILJS_SERVICE_ID,
-                template_id: process.env.EMAILJS_TEMPLATE_ID,
+                service_id: "service_fcfdk1p",
+                template_id: "template_epeq4jb",
                 user_params: {
-                  to_email: process.env.TO_EMAIL,
+                  to_email: "milo.jasper@angularspring.com",
                   subject: "⚠️ Server Down Alert",
                   message: downServers.map(server => 
                     `ID: ${server.id}\n` +
